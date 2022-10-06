@@ -233,7 +233,7 @@ static void check_thp_state(void) {
 }
 
 static pthread_mutex_t cheap_mutex = PTHREAD_MUTEX_INITIALIZER;
-static struct cheap *h = NULL;
+static struct cheap *h;
 
 static void *alloc_arena_mmap_dax(size_t page_size, size_t arena_size,
 				  const char *daxdev)
@@ -257,15 +257,16 @@ static void *alloc_arena_mmap_dax(size_t page_size, size_t arena_size,
   arena = cheap_memalign(h,
 			 page_size, /* alignment */
 			 arena_size);
-  pthread_mutex_unlock(&cheap_mutex);
-  if (arena) {
-    memset(arena, 0, arena_size);
-  }
-  else {
+  if (!arena) {
     fprintf(stderr, "%s: cursor_heap allocation of %ld bytes failed; "
 	    "used/available: %ld/%ld\n", __func__, arena_size,
 	    cheap_used(h), cheap_avail(h));
     exit(-1);
+  }
+  pthread_mutex_unlock(&cheap_mutex);
+
+  if (arena) {
+    memset(arena, 0, arena_size);
   }
   return arena;
 }

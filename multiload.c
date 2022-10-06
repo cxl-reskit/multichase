@@ -844,9 +844,9 @@ int main(int argc, char **argv) {
         }
         break;
       case 'd':
-	daxdev = optarg;
-	page_size = 2 * 1024 *1024;
-	break;
+        daxdev = optarg;
+        page_size = 2 * 1024 * 1024;
+        break;
       case 'F':
         if (parse_mem_arg(optarg, &cache_flush_size)) {
           fprintf(stderr,
@@ -856,10 +856,6 @@ int main(int argc, char **argv) {
         }
         break;
       case 'p':
-	if (daxdev) {
-          fprintf(stderr, "page size cannot be specified with dax memory\n");
-          exit(1);
-	}
         if (parse_mem_arg(optarg, &page_size)) {
           fprintf(stderr,
                   "Error: page_size must be a non-negative integer (suffixed "
@@ -1015,14 +1011,15 @@ int main(int argc, char **argv) {
     }
     fprintf(stderr, "         default: %s\n", chases[0].name);
     fprintf(stderr,
-            "-d <daxdev>    test dax memory (e.g. /dev/dax0.0) "
-	    "instead of general purpose memory\n");
-    fprintf(stderr,
             "-l memload     select one of several different memloads:\n");
     for (i = 0; i < sizeof(memloads) / sizeof(memloads[0]); ++i) {
       fprintf(stderr, "   %-12s%s\n", memloads[i].usage1, memloads[i].usage2);
     }
     fprintf(stderr, "         default: %s\n", memloads[0].name);
+    fprintf(stderr,
+            "-d <daxdev>    test dax memory (e.g. /dev/dax0.0)\n"
+            "               (not compatible with -H and -W)\n"
+            "               NOTE: dax uses 2MiB pages\n");
     fprintf(stderr,
             "-F nnnn[kmg]   amount of memory to use to flush the caches after "
             "constructing\n"
@@ -1116,6 +1113,18 @@ int main(int argc, char **argv) {
             "least %zu bytes\n",
             nr_threads * chase->parallelism * chase->base_object_size);
     exit(1);
+  }
+
+  if (daxdev && (use_thp || is_weighted_mbind)) {
+    fprintf(stderr,
+	    "specifying -d <daxdev> is incompatible with -W and -H\n");
+    exit(-1);
+  }
+
+  if (daxdev && (page_size != (2 * 1024 * 1024))) {
+    fprintf(stderr,
+	    "testing dax memory requires a 2MiB page size\n");
+    exit(-1);
   }
 
   if (verbosity > 0) {
